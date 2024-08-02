@@ -29,7 +29,7 @@ app.post('/comments/:id/replies', (req, res) => {
     if (comment) {
         comment.replies = comment.replies || [];
         comment.replies.push(reply);
-        res.json(comment);
+        res.json(comments); // Return the entire list of comments
     } else {
         res.status(404).send('Comment not found');
     }
