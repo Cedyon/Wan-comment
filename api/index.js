@@ -8,6 +8,18 @@ app.use(express.json());
 
 let comments = [];
 
+// Helper function to find a comment or reply by id
+const findCommentById = (comments, id) => {
+    for (let comment of comments) {
+        if (comment.id == id) return comment;
+        if (comment.replies) {
+            const found = findCommentById(comment.replies, id);
+            if (found) return found;
+        }
+    }
+    return null;
+};
+
 app.get('/', (req, res) => {
     res.send('Welcome to the Comments API');
 });
@@ -25,10 +37,12 @@ app.post('/comments', (req, res) => {
 app.post('/comments/:id/replies', (req, res) => {
     const { id } = req.params;
     const reply = req.body;
-    const comment = comments.find(c => c.id == id);
+    const comment = findCommentById(comments, id);
     if (comment) {
         comment.replies = comment.replies || [];
-        comment.replies.push({ ...reply, id: comment.replies.length, replies: [] });
+        reply.id = comment.replies.length;
+        reply.replies = [];
+        comment.replies.push(reply);
         res.json(comments);
     } else {
         res.status(404).send('Comment not found');
@@ -38,12 +52,14 @@ app.post('/comments/:id/replies', (req, res) => {
 app.post('/comments/:id/replies/:replyId/replies', (req, res) => {
     const { id, replyId } = req.params;
     const newReply = req.body;
-    const comment = comments.find(c => c.id == id);
+    const comment = findCommentById(comments, id);
     if (comment) {
         const reply = comment.replies.find(r => r.id == replyId);
         if (reply) {
             reply.replies = reply.replies || [];
-            reply.replies.push({ ...newReply, id: reply.replies.length });
+            newReply.id = reply.replies.length;
+            newReply.replies = [];
+            reply.replies.push(newReply);
             res.json(comments);
         } else {
             res.status(404).send('Reply not found');
