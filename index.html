@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comment Section with Nested Replies</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+
+        .comments-section {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+
+        .comments-section h2 {
+            margin-top: 0;
+        }
+
+        .comment-form {
+            margin-bottom: 20px;
+        }
+
+        .comment-form textarea {
+            width: 100%;
+            height: 100px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            font-family: Arial, sans-serif;
+        }
+
+        .comment-form button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            background-color: orange;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .comment {
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+            margin-left: 0;
+        }
+
+        .reply-button {
+            background-color: transparent;
+            border: none;
+            color: blue;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0;
+            margin-left: 10px;
+        }
+
+        .reply-form {
+            margin-top: 10px;
+        }
+
+        .reply-form textarea {
+            width: 100%;
+            height: 80px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            font-family: Arial, sans-serif;
+        }
+
+        .reply-form button {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            background-color: orange;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .view-more {
+            cursor: pointer;
+            color: blue;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="comments-section">
+        <h2>Comments</h2>
+        <div class="comment-form">
+            <textarea id="comment-input" placeholder="Add your comment"></textarea>
+            <button onclick="addComment()">Submit</button>
+        </div>
+        <div id="comments-container"></div>
+    </div>
+
+    <script>
+        const backendUrl = 'https://wan-comment.vercel.app/'; // Replace with your Vercel URL
+        let currentUser = null;
+
+        function promptUserName() {
+            if (!currentUser) {
+                const name = prompt("Please enter your name:");
+                if (name) {
+                    currentUser = { name: name };
+                } else {
+                    alert("Name is required to comment.");
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        async function addComment() {
+            console.log('Adding comment...');
+            if (promptUserName()) {
+                const commentInput = document.getElementById('comment-input');
+                const commentText = commentInput.value.trim();
+                if (commentText) {
+                    try {
+                        const response = await fetch(`${backendUrl}/comments`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: currentUser.name, text: commentText })
+                        });
+                        const comments = await response.json();
+                        console.log('Comments fetched:', comments);
+                        renderComments(comments);
+                        commentInput.value = '';
+                    } catch (error) {
+                        console.error('Error adding comment:', error);
+                    }
+                } else {
+                    console.log('Comment text is empty.');
+                }
+            }
+        }
+
+        async function addReply(button) {
+            console.log('Adding reply...');
+            const replyInput = button.previousElementSibling;
+            const replyText = replyInput.value.trim();
+            if (replyText) {
+                const commentId = button.closest('.comment').dataset.id;
+                try {
+                    const response = await fetch(`${backendUrl}/comments/${commentId}/replies`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: currentUser.name, text: replyText })
+                    });
+                    const comment = await response.json();
+                    console.log('Replies fetched:', comment.replies);
+                    renderReplies(comment.replies, button.closest('.replies'));
+                    replyInput.parentElement.remove();
+                } catch (error) {
+                    console.error('Error adding reply:', error);
+                }
+            } else {
+                console.log('Reply text is empty.');
+            }
+        }
+
+        function showReplyForm(button) {
+            console.log('Showing reply form...');
+            if (promptUserName()) {
+                const replyForm = document.createElement('div');
+                replyForm.className = 'reply-form';
+                replyForm.innerHTML = `
+          <textarea placeholder="Add your reply"></textarea>
+          <button onclick="addReply(this)">Submit</button>
+        `;
+                button.parentElement.appendChild(replyForm);
+                button.style.display = 'none';
+            }
+        }
+
+        async function fetchComments() {
+            console.log('Fetching comments...');
+            try {
+                const response = await fetch(`${backendUrl}/comments`);
+                const comments = await response.json();
+                console.log('Comments fetched:', comments);
+                renderComments(comments);
+            } catch (error) {
+                console.error('Error fetching comments:', error);
+            }
+        }
+
+        function renderComments(comments) {
+            console.log('Rendering comments...');
+            const commentsContainer = document.getElementById('comments-container');
+            commentsContainer.innerHTML = '';
+            comments.forEach(comment => {
+                const commentElement = document.createElement('div');
+                commentElement.className = 'comment';
+                commentElement.dataset.id = comment.id;
+                commentElement.innerHTML = `
+          <strong>${comment.name}:</strong> ${comment.text}
+          <button class="reply-button" onclick="showReplyForm(this)">Reply</button>
+          <div class="replies"></div>
+        `;
+                renderReplies(comment.replies, commentElement.querySelector('.replies'));
+                commentsContainer.appendChild(commentElement);
+            });
+        }
+
+        function renderReplies(replies, container) {
+            console.log('Rendering replies...');
+            container.innerHTML = '';
+            if (replies && replies.length > 0) {
+                replies.forEach(reply => {
+                    const replyElement = document.createElement('div');
+                    replyElement.className = 'comment';
+                    replyElement.innerHTML = `
+            <strong>${reply.name}:</strong> ${reply.text}
+            <button class="reply-button" onclick="showReplyForm(this)">Reply</button>
+            <div class="replies"></div>
+          `;
+                    container.appendChild(replyElement);
+                });
+            }
+        }
+
+        window.onload = fetchComments;
+    </script>
+</body>
+
+</html>
