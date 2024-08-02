@@ -35,6 +35,23 @@ app.post('/comments/:id/replies', (req, res) => {
     }
 });
 
+app.delete('/comments/:id', (req, res) => {
+    const { id } = req.params;
+    const index = comments.findIndex(c => c.id == id);
+
+    if (index !== -1) {
+        comments.splice(index, 1);
+        res.json({ message: 'Comment deleted successfully', comments });
+    } else {
+        res.status(404).send('Comment not found');
+    }
+});
+
+app.delete('/comments', (req, res) => {
+    comments = [];
+    res.json({ message: 'All comments deleted successfully' });
+});
+
 app.listen(port, () => {
     console.log(`Server running on port ${port}`);
 });
