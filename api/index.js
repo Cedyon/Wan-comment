@@ -18,7 +18,7 @@ app.get('/comments', (req, res) => {
 
 app.post('/comments', (req, res) => {
     const comment = req.body;
-    comments.push({ ...comment, id: comments.length });
+    comments.push({ ...comment, id: comments.length, replies: [] });
     res.json(comments);
 });
 
@@ -28,8 +28,26 @@ app.post('/comments/:id/replies', (req, res) => {
     const comment = comments.find(c => c.id == id);
     if (comment) {
         comment.replies = comment.replies || [];
-        comment.replies.push(reply);
-        res.json(comments); // Return the entire list of comments
+        comment.replies.push({ ...reply, id: comment.replies.length, replies: [] });
+        res.json(comments);
+    } else {
+        res.status(404).send('Comment not found');
+    }
+});
+
+app.post('/comments/:id/replies/:replyId/replies', (req, res) => {
+    const { id, replyId } = req.params;
+    const newReply = req.body;
+    const comment = comments.find(c => c.id == id);
+    if (comment) {
+        const reply = comment.replies.find(r => r.id == replyId);
+        if (reply) {
+            reply.replies = reply.replies || [];
+            reply.replies.push({ ...newReply, id: reply.replies.length });
+            res.json(comments);
+        } else {
+            res.status(404).send('Reply not found');
+        }
     } else {
         res.status(404).send('Comment not found');
     }
